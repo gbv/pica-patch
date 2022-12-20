@@ -3,11 +3,10 @@ title: PICA Patch
 language: en
 ---
 
-**PICA Patch** is a data format to record changes between records in PICA+ format.
+**PICA Patch** is a data format to express changes between records in PICA+ format.
 
 * author: Jakob Voß
-* version: 0.9.1
-* date: 2022-12-16
+* date: 2022-12-20
 
 ## Table of Contents
 
@@ -21,10 +20,10 @@ language: en
 
 ## Introduction
 
-This document defines **PICA Patch**, a data format to express changes to
+This document defines **PICA Patch**, a data format to express changes between
 records in PICA+ format in a machine-readable and reproducible way.  Records in
 PICA Patch format specify fields to add, to remove, and/or to compare with an
-existing PICA+ record. The rationale of PICA Patch is to communicate changes of
+existing PICA record. The rationale of PICA Patch is to communicate changes of
 PICA records in an unambigous, descriptive form (as data) instead of imperative
 instructions (as code).
 
@@ -50,7 +49,7 @@ A **PICA field** consists of:
     - a **subfield code**, being an alphanumeric character (one of `0-9`, `A-Z`, `a-z`)
     - a **subfield value**, being a string
 
-Two PICA fields are identical if then have same tag, same occurrence and same subfield sequence with same order of subfield codes and subfield values.
+Two PICA fields are identical if they have same tag, same occurrence and same subfield sequence.
 
 A **PICA record** is a sequence of PICA fields.
 
@@ -113,57 +112,49 @@ In PICA Patch JSON each PICA Patch record is encoded as JSON array of fields. Ea
 
 ## Algorithms
 
-Two PICA records *A* and *B* can be compared to calculate their difference as PICA Patch record *P* ([diff algorithm](#diff-algorithm)). In reverse the application of *P* to *A* ([patch algorithm](#patch-algorithm)) will result in *A*. Both algorithms require *A* and *B* or *A* and *P* respectively to met common [requirements](#requirements) to be applicable.
+Two PICA records *A* and *B* can be compared to calculate their difference as PICA Patch record *P* ([diff algorithm](#diff-algorithm)). In reverse the application of *P* to *A* will result in *A* ([patch algorithm](#patch-algorithm)). Both algorithms require *A* and *B* or *A* and *P* respectively to met common [requirements](#requirements) to be applicable.
 
 ### Requirements
 
 - **Same levels:** 
-  Diff and patch are only defined for PICA (patch) records with same same level for all of their fields. Applications may filter out fields with different level or cancel with an error. Records of level 2 must further have same occurrence for all of their fields.
+  Diff and patch are only defined for PICA (patch) records with same same level for all of their fields. Records of level 2 must further have same occurrence for all of their fields. Applications may filter out fields with different level or reject application with an error.
 
 - **Unique fields:**
   A PICA (patch) record must not contain [identical fields](#data-model).
+  Applications may ignore this requirement if stable order of multiple fields with same tag and same occurrence is not needed.
 
 - **Sorted fields:**
-  PICA (patch) records must also be sorted by tag first and occurrence second, and annotation third to apply diff or patch algorithm. Annotations are not sorted by theor byte code but space first, minus second and plus third. Applications should automatically sort fields to fulfil this requirement.
+  PICA (patch) records must be sorted by tag first and occurrence second, and annotation third. Annotations are not sorted by byte code but space first, minus second and plus third. Applications should automatically sort fields to fulfil this requirement.
 
 ### Diff algorithm
 
 The difference between two PICA records *A* and *B* can be calculated as PICA Patch record *P* as following, based on the definition of [identical fields](#data-model):
 
-1. Find all fields given in *A* but not given in *B*. Let *P* be these fields annotated with `-`.
-2. Find all fields given in *B* but not given in *C*. Add these fields annotated with `+` to *P*.
+1. Find all fields given in *A* but not given in *B*. Let *P* be these fields annotated with minus.
+2. Find all fields given in *B* but not given in *C*. Add these fields annotated with plus to *P*.
 4. Sort fields of *P* as defined by the [requirements](#requirements).
 
 ### Patch algorithm
 
-A PICA record *R* is modified with a PICA Patch record *P* by the following algorithm:
+A PICA record *R* is modified with a PICA Patch record *P* based on the following algorithm or an equivalent implementation:
 
-**Precondition**
+1. **Precondition**: Get all fields of *P* annotated with space or minus. If any of
+    this fields does not exist with same field content in *R* reject patch.
 
-- Get all fields of *P* annotated with space or minus. If any of
-  this fields does not exist with same field content in *R* cancel with a warning.
+2. **Removals**: Remove all fields of *P* annotated with minus from *R*
 
-**Removals**
+3. **Additions**: For each field of *P* annotated with plus: add the field to *R*
+    unless an identical fields already exists in *R*.
 
-- Remove all fields of *P* annotated with -from *R*
+4. **Sort fields** of *R* as defined by [requirements](#requirements).
 
-**Additions**
-
-- For each field of *P* annotated with +: add the field to *R*
-  unless it already exists with same field content in *R*.
-
-**Maintain sorting** of *R*
-
-
-*Note: Patch is an idempotent operation. Patching a record multiple times with the same PICA patch record does not change the result if the PICA Patch record contains no fields annotated with ?????i*
+*Note: Patch is an idempotent operation except removal of fields. Patching a record multiple times with the same PICA patch record does not change the result if the PICA Patch record contains no fields annotated with minus.*
 
 ## Examples
 
-This section is non-normative.
-
 ### Serializations
 
-The following PICA Patch record in Plain syntax consists of three fields, annotated by space, `-` and `+` respectively:
+The following PICA Patch record in Plain syntax consists of three fields, annotated by space, minus and plus respectively:
 
 ~~~
   003@ $01234
@@ -174,9 +165,9 @@ The following PICA Patch record in Plain syntax consists of three fields, annota
 Normalized syntax is binary so it can only be shown in modified form: Special byte codes are represented in brackets and line breaks have been added for readability:
 
 ~~~
-003@ \[1F\]01234\[1E\]\
-021A-\[1F\]aA book\[1E\]\
-021A+\[1F\]aA book\[1F\]hfor reading\[1E\]\[A0\]
+003@ [1F]01234[1E]
+021A-[1F]aA book[1E]
+021A+[1F]aA book[1F]hfor reading[1E][A0]
 ~~~
 
 The same record in JSON syntax is:
@@ -205,22 +196,22 @@ while (<>) {
 
 ### Patch
 
-Unconditionally add field 021Awith one subfield \$aand value A book to a
-record, unless the record already has field021Awith exactely this value:
+Unconditionally add field `021A`with one subfield `$a` and value `A book`
+to a record, unless the record already has field021Awith exactely this value:
 
 ~~~
 + 021A $aA book
 ~~~
 
-Same as above but cancel with an error if the record to be patched does
-not have field `003@` with only subfield `0`having value 1234:
+Same as above but reject patch with an error if the record to be patched does
+not have field `003@` with only subfield `0`having value `1234`:
 
 ~~~
   003@ $01234
 + 021A $aA book
 ~~~
 
-Replace content field 021Aor give a warning if current content is not as
+Replace content field `021A` or reject patch if current content is not as
 expected:
 
 ~~~
@@ -228,22 +219,33 @@ expected:
 + 021A $aA book$hfor reading
 ~~~
 
+Extend record having field `045R` with given subfields (link to RVK notation `TY 1200` in K10plus) with a field `045Q/01` (corresponding BK notation `38.27` based on a mapping):
+
+~~~
++ 045Q/01 $9106407171$Acoli-conc RVK-BK$Ahttps://coli-conc.gbv.de/api/mappings/0f12d635-212f-4933-ae3a-ea36c1a92e66
+  045R $91271953439
+~~~
+
 ## Application
 
-PICA+ is used primarily in CBS databases and PICA Patch was inspired by
-record versioning in CBS. When applied with CBS databases, the
-application should inspect PICA Patch records and run additional processing
-such:
+PICA+ is used primarily in CBS databases and PICA Patch was inspired by record
+versioning in CBS. When applied with CBS databases, the application should
+inspect and modify PICA Patch records depending on use case, for instance:
 
--   Use field `003@` to look up which record to modfiy (when annotated by )
-    or to delete (when annotated by -)
--   Disallow modification of special fields and field values.
--   Ignore subfields created by expansion (`$8` for online-expansion and other subfields for offline-expansion)
--   Extend modification to automatically modify special fields such as date of modification (`001B`)
--   Validate resulting record against Avram Schema.
+- Use field `003@` to look up which record to modfiy (when annotated by space)
+  or to delete (when annotated by minus)
+- Disallow modification of special fields and field values.
+- Ignore subfields created by expansion of subfield `$9`
+  (`$8` for online-expansion and other subfields for offline-expansion)
+- Extend modification to automatically modify special fields such as date of modification  (`001B`)
+- Validate records against an Avram Schema.
 
 Which and how to do this processing is out of the scope of this specification.
 
 ## Changes
 
 This document is managed in a git repository at <https://github.com/gbv/pica-patch>.
+
+* 2022-12-20: Published revised version at <https://format.gbv.de/pica/patch/specification>
+* 2022-09-14: First English version, shared after CBS partner meeting
+
