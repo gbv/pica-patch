@@ -63,7 +63,7 @@ A **PICA Patch record** is a sequence of PICA fields, each annotated with an **a
 
 PICA Patch records, can be encoded in multiple losslessly convertible forms:
 
-- [PICA Patch Normalized](#pica-patch-plain) is best for human inspection
+- [PICA Patch Plain](#pica-patch-plain) is best for human inspection
 - [PICA Patch Normalized](#pica-patch-normalized) is easier to process automatically
 - [PICA Patch JSON](#pica-patch-json) is useful in web applications
 
