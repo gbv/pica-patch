@@ -156,7 +156,7 @@ A PICA record *R* is modified with a PICA Patch record *P* based on the followin
 
 The following PICA Patch record in Plain syntax consists of three fields, annotated by space, minus and plus respectively:
 
-~~~
+~~~pica-patch
   003@ $01234
 - 021A $aA book
 + 021A $aA book$hfor reading
@@ -164,7 +164,7 @@ The following PICA Patch record in Plain syntax consists of three fields, annota
 
 Normalized syntax is binary so it can only be shown in modified form: Special byte codes are represented in brackets and line breaks have been added for readability:
 
-~~~
+~~~txt
 003@ [1F]01234[1E]
 021A-[1F]aA book[1E]
 021A+[1F]aA book[1F]hfor reading[1E][A0]
@@ -196,17 +196,17 @@ while (<>) {
 
 ### Patch
 
-Unconditionally add field `021A`with one subfield `$a` and value `A book`
-to a record, unless the record already has field021Awith exactely this value:
+Unconditionally add field `021A` with one subfield `$a` and value `A book` to a
+record, unless the record already has field `021A` with exactely this value:
 
-~~~
+~~~pica-patch
 + 021A $aA book
 ~~~
 
 Same as above but reject patch with an error if the record to be patched does
 not have field `003@` with only subfield `0`having value `1234`:
 
-~~~
+~~~pica-patch
   003@ $01234
 + 021A $aA book
 ~~~
@@ -214,14 +214,14 @@ not have field `003@` with only subfield `0`having value `1234`:
 Replace content field `021A` or reject patch if current content is not as
 expected:
 
-~~~
+~~~pica-patch
 - 021A $aA book
 + 021A $aA book$hfor reading
 ~~~
 
 Extend record having field `045R` with given subfields (link to RVK notation `TY 1200` in K10plus) with a field `045Q/01` (corresponding BK notation `38.27` based on a mapping):
 
-~~~
+~~~pica-patch
 + 045Q/01 $9106407171$Acoli-conc RVK-BK$Ahttps://coli-conc.gbv.de/api/mappings/0f12d635-212f-4933-ae3a-ea36c1a92e66
   045R $91271953439
 ~~~
