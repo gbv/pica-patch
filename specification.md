@@ -6,15 +6,23 @@ language: en
 **PICA Patch** is a data format to express changes between records in PICA+ format.
 
 * author: Jakob Voß
-* date: 2022-12-20
+* date: 2023-01-23
 
 ## Table of Contents
 
 - [Introduction](#introduction)
 - [Data Model](#data-model)
 - [Serialization](#serialization)
+  - [PICA Patch Plain](#pica-patch-plain)
+  - [PICA Patch Normalized](#pica-patch-normalized)
+  - [PICA Patch JSON](#pica-patch-json)
 - [Algorithms](#algorithms)
+  - [Requirements](#requirements)
+  - [Diff algorithm](#diff-algorithm)
+  - [Patch algorithm](#patch-algorithm)
 - [Examples](#examples)
+  - [Serializations](#serializations)
+  - [Patch](#patch)
 - [Application](#application)
 - [Changlog](#changelog)
 
@@ -136,7 +144,7 @@ The difference between two PICA records *A* and *B* can be calculated as PICA Pa
 
 ### Patch algorithm
 
-A PICA record *R* is modified with a PICA Patch record *P* based on the following algorithm or an equivalent implementation:
+A PICA record *R* is modified ("patched") with a PICA Patch record *P* based on the following algorithm or an equivalent implementation:
 
 1. **Precondition**: Get all fields of *P* annotated with space or minus. If any of
     this fields does not exist with same field content in *R* reject patch.
@@ -148,7 +156,7 @@ A PICA record *R* is modified with a PICA Patch record *P* based on the followin
 
 4. **Sort fields** of *R* as defined by [requirements](#requirements).
 
-*Note: Patch is an idempotent operation except removal of fields. Patching a record multiple times with the same PICA patch record does not change the result if the PICA Patch record contains no fields annotated with minus.*
+Patching is an idempotent operation: that means patching a record multiple times with the same PICA Patch record does not change the result.
 
 ## Examples
 
@@ -246,6 +254,7 @@ Which and how to do this processing is out of the scope of this specification.
 
 This document is managed in a git repository at <https://github.com/gbv/pica-patch>.
 
+* 2023-01-23: Typos, layout and clarify idempotency of patching.
 * 2022-12-20: Published revised version at <https://format.gbv.de/pica/patch/specification>
 * 2022-09-14: First English version, shared after CBS partner meeting
 
