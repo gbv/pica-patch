@@ -28,9 +28,14 @@ sub run {
       or pod2usage(2);
     pod2usage(1) if $opt{help};
 
-    my $unexpand = $opt{expansion} ? expansion( $opt{expansion} ) : [];
+    $opt{unexpand} = $opt{expansion} ? expansion( $opt{expansion} ) : [];
 
-    my $parser = pica_parser( plain => $_[0], strict => 1 );
+    process( $_, \%opt ) for @_;
+}
+
+sub process {
+    my ( $from, $opt ) = @_;
+    my $parser = pica_parser( plain => $from, strict => 1 );
 
     my $n = 1;
     while ( my $rec = $parser->next ) {
@@ -46,7 +51,7 @@ sub run {
               if $field->[0] eq '003@' and $a ne ' ';
 
             die "$n: detected offline expansion of linked record (\$9)\n"
-              if expanded_subfields( $field, $unexpand );
+              if expanded_subfields( $field, $opt->{unexpand} );
         }
         die "$n: missing modification (+/-) in record" unless $modify;
         $n++;
