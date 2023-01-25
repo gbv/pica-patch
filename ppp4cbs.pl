@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 package PPP4CBS;
 
 use v5.14.1;
@@ -34,8 +34,6 @@ sub run {
 
     my $n = 1;
     while ( my $rec = $parser->next ) {
-        die "$n: missing PPN\n" unless $rec->id;
-
         my $modify;
         for my $field ( @{ $rec->fields } ) {
 

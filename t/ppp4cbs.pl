@@ -7,7 +7,6 @@ require "./ppp4cbs.pl";    ## no critic
 *run = *PPP4CBS::run;
 
 throws_ok { run("t/pica.plain") } qr/missing annotation/;
-throws_ok { run( \"  021A \$ax\n" ) } qr/missing PPN/;
 throws_ok { run( \"  003@ \$01\n~ 021A \$ax\n" ) } qr/invalid annotation: ~/;
 throws_ok { run( \"+ 003@ \$01\n" ) } qr/PPN must not be annotated/;
 throws_ok { run( \"  003@ \$01\n" ) } qr/missing modification/;

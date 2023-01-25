@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Convert from PICA Patch Plain to PICA Patch Normalized
 use v5.14.1;
 while (<>) {
