@@ -1,0 +1,4 @@
+# Diese Datei listet zu einzelnen Feldern
+# Unterfeldcodes auf, die nicht aus Expansion von $9 stammen.
+
+045Q/01 A

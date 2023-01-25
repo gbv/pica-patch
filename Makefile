@@ -1,2 +1,5 @@
 test:
-	perl t/pppcheck4cbs.pl
+	perl t/ppp4cbs.pl
+
+deps:
+	cpanm --installdeps .

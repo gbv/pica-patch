@@ -3,4 +3,4 @@ This git repository, hosted at <https://github.com/gbv/pica-patch> contains the 
 ## Additional tools
 
 - `ppp2norm.pl` - convert from PICA Patch Plain to PICA Patch Normalized (no dependencies)
-- `pppcheck4cbs.pl` - (requires PICA::Data)
+- `ppp4cbs.pl` - checks PICA Patch records to be applied in CBS database (dependencies in `cpanfile`).
