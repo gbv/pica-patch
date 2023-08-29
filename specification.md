@@ -17,13 +17,10 @@ language: en
   - [PICA Patch JSON](#pica-patch-json)
   - [PICA Patch Normalized](#pica-patch-normalized)
 - [Algorithms](#algorithms)
-  - [Requirements](#requirements)
   - [Diff algorithm](#diff-algorithm)
   - [Patch algorithm](#patch-algorithm)
-- [Examples](#examples)
-  - [Serializations](#serializations)
-  - [Patch](#patch)
-- [Application](#application)
+- [Patch examples](#patch-examples)
+- [Application notes](#application-notes)
 - [Changlog](#changelog)
 
 ## Introduction
@@ -41,12 +38,7 @@ The specification consists of a **normative part** with
 - definition of interchangeable [serialization formats](#serialization) to encode and exchange PICA Patch records,
 - definition of [algorithms](#algorithms) to apply and create PICA Patch records
 
-and an **informative part** with
-
-- [examples](#examples) of serialization and patching and
-- [application](#application) notes.
-
-Notes and examples are non-normative.
+and an **informative part** with notes, examples and a [changelog](#changelog).
 
 ## Data Model
 
@@ -59,7 +51,7 @@ A **PICA field** consists of:
     - a **subfield code**, being an alphanumeric character (one of `0-9`, `A-Z`, `a-z`)
     - a **subfield value**, being a (possibly empty) string
 
-Two PICA fields are identical if they have same tag, same occurrence and same subfield sequence.
+Two PICA fields are identical if they have same tag, same occurrence and same subfield sequence (same codes and values in same order).
 
 A **PICA record** is a sequence of PICA fields.
 
@@ -75,7 +67,7 @@ PICA Patch records, can be encoded in multiple losslessly convertible forms:
 
 - [PICA Patch Plain](#pica-patch-plain) is best for human inspection
 - [PICA Patch JSON](#pica-patch-json) is useful in web applications
-- [PICA Patch Normalized](#pica-patch-normalized) is easier to process automatically
+- [PICA Patch Normalized](#pica-patch-normalized) can be easier to process automatically
 
 ### PICA Patch Plain
 
@@ -93,6 +85,14 @@ In PICA Patch Plain each PICA field is encoded as a sequence of:
 
 A PICA Patch record is a sequence of encoded PICA fields. Multiple records must be separated by empty lines (non-empty sequences of newline characters).
 
+*Example: A PICA Patch record in Plain consisting of three fields, annotated by space, minus and plus respectively:*
+
+~~~pica-patch
+  003@ $01234
+- 021A $aA book
++ 021A $aA book$hfor reading
+~~~
+
 *Note: A PICA Patch record having every field annotated with a space in PICA Patch Plain is serialized identical to [PICA Plain](https://format.gbv.de/pica/plain) serialization of the PICA record without annotations.*
 
 ### PICA Patch JSON
@@ -104,7 +104,17 @@ In PICA Patch JSON each PICA Patch record is encoded as JSON array of fields. Ea
 3. the subfields as alternating subfield codes and subfield values
 4. the annotation character (plus, minus or space)
 
-*Note: PICA Patch JSON is an extension of [PICA JSON Format](https://format.gbv.de/pica/json) by an additional array element in each field. Both formats can be distinguished by checking whether the number of array elements in a field is odd or even.*
+*Example: The same PICA Patch record as given above, in PICA Patch JSON:*
+
+~~~json
+[
+  ["003@","","0","1234"," "],
+  ["021A","","a","A book","-"],
+  ["021A","","a","A book","h","for reading","+"]
+ ]
+~~~
+
+*Note: PICA Patch JSON is an extension of [PICA JSON](https://format.gbv.de/pica/json) by an additional array element in each field. Both formats can be distinguished by checking whether the number of array elements in a field is odd or even.*
 
 ### PICA Patch Normalized
 
@@ -119,23 +129,26 @@ In PICA Patch Normalized each PICA Patch record is encoded as sequence of fields
     - the subfield value
 5. an end-of-field character (byte code `1E`)
 
-*Note: A PICA Patch record having every field annotated with a space in PICA Patch Normalized is serialized identical to [PICA Normalized serialization](https://format.gbv.de/pica/normalized) of the PICA record without annotations.*
+*Example: The same PICA Patch record as given above, in PICA Patch Normalized. For readability special byte codes are shown in brackets and line breaks have been added:*
+
+~~~txt
+003@ [1F]01234[1E]
+021A-[1F]aA book[1E]
+021A+[1F]aA book[1F]hfor reading[1E][A0]
+~~~
+
+*Note: A PICA Patch record having every field annotated with a space in PICA Patch Normalized is serialized identical to [PICA Normalized](https://format.gbv.de/pica/normalized) serialization of PICA records without annotations.*
 
 ## Algorithms
 
-Two PICA records *A* and *B* can be compared to calculate their difference as PICA Patch record *P* ([diff algorithm](#diff-algorithm)). In reverse the application of *P* to *A* will result in *A* ([patch algorithm](#patch-algorithm)). Both algorithms require *A* and *B* or *A* and *P* respectively to met common [requirements](#requirements) to be applicable.
-
-### Requirements
+Two PICA records *A* and *B* can be compared to calculate their difference as PICA Patch record *P* ([diff algorithm](#diff-algorithm)). In reverse the application of *P* to *A* will result in *A* ([patch algorithm](#patch-algorithm)). Both algorithms require *A* and *B* or *A* and *P* respectively to meet the following requirements to be applicable:
 
 - **Same levels:** 
   Diff and patch are only defined for PICA (patch) records with same same level for all of their fields. Records of level 2 must further have same occurrence for all of their fields. Applications may filter out fields with different level or reject application with an error.
 
 - **Unique fields:**
   A PICA (patch) record must not contain [identical fields](#data-model).
-  Applications may ignore this requirement if stable order of multiple fields with same tag and same occurrence is not needed.
-
-- **Sorted fields:**
-  PICA (patch) records must be sorted by tag first and occurrence second, and annotation third. Annotations are not sorted by byte code but space first, minus second and plus third. Applications should automatically sort fields to fulfil this requirement.
+  Applications may ignore this requirement by automatically removing duplicated fields.
 
 ### Diff algorithm
 
@@ -143,7 +156,6 @@ The difference between two PICA records *A* and *B* can be calculated as PICA Pa
 
 1. Find all fields given in *A* but not given in *B*. Let *P* be these fields annotated with minus.
 2. Find all fields given in *B* but not given in *C*. Add these fields annotated with plus to *P*.
-4. Sort fields of *P* as defined by the [requirements](#requirements).
 
 ### Patch algorithm
 
@@ -157,41 +169,9 @@ A PICA record *R* is modified ("patched") with a PICA Patch record *P* based on 
 3. **Additions**: For each field of *P* annotated with plus: add the field to *R*
     unless an identical fields already exists in *R*.
 
-4. **Sort fields** of *R* as defined by [requirements](#requirements).
-
 Patching is an idempotent operation: that means patching a record multiple times with the same PICA Patch record does not change the result.
 
-## Examples
-
-### Serializations
-
-The following PICA Patch record in Plain syntax consists of three fields, annotated by space, minus and plus respectively:
-
-~~~pica-patch
-  003@ $01234
-- 021A $aA book
-+ 021A $aA book$hfor reading
-~~~
-
-Normalized syntax is binary so it can only be shown in modified form: Special byte codes are represented in brackets and line breaks have been added for readability:
-
-~~~txt
-003@ [1F]01234[1E]
-021A-[1F]aA book[1E]
-021A+[1F]aA book[1F]hfor reading[1E][A0]
-~~~
-
-The same record in JSON syntax is:
-
-~~~json
-[
-  ["003@","","0","1234"," "],
-  ["021A","","a","A book","-"],
-  ["021A","","a","A book","h","for reading","+"]
- ]
-~~~
-
-### Patch
+## Patch Examples
 
 Unconditionally add field `021A` with one subfield `$a` and value `A book` to a
 record, unless the record already has field `021A` with exactely this value:
@@ -223,19 +203,19 @@ Extend record having field `045R` with given subfields (link to RVK notation `TY
   045R $91271953439
 ~~~
 
-## Application
+## Application notes
 
 PICA+ is used primarily in CBS databases and PICA Patch was inspired by record
 versioning in CBS. When applied with CBS databases, the application should
 inspect and modify PICA Patch records depending on use case, for instance:
 
-- Use field `003@` to look up which record to modfiy (when annotated by space)
-  or to delete (when annotated by minus)
-- Disallow modification of special fields and field values.
+- Use field `003@` or another identifier field to look up which record to modfiy
+  (when annotated by space) or to delete (when annotated by minus)
+- Disallow modification of special fields and field values
 - Ignore subfields created by expansion of subfield `$9`
   (`$8` for online-expansion and other subfields for offline-expansion)
 - Extend modification to automatically modify special fields such as date of modification  (`001B`)
-- Validate records against an Avram Schema.
+- Validate records against an [Avram Schema](https://format.gbv.de/schema/avram/specification)
 
 Which and how to do this processing is out of the scope of this specification.
 
@@ -243,7 +223,7 @@ Which and how to do this processing is out of the scope of this specification.
 
 This document is managed in a git repository at <https://github.com/gbv/pica-patch>.
 
-* 2023-08-29: Allow any sequence of spaces for annotation character space in PICA Patch Plain
+* 2023-08-29: Allow any sequence of spaces for annotation character space in PICA Patch Plain. Remove sorting requirement.
 * 2023-01-23: Typos, layout and clarify idempotency of patching.
 * 2022-12-20: Published revised version at <https://format.gbv.de/pica/patch/specification>
 * 2022-09-14: First English version, shared after CBS partner meeting
