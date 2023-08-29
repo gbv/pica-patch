@@ -6,7 +6,7 @@ language: en
 **PICA Patch** is a data format to express changes between records in PICA+ format.
 
 * author: Jakob Voß
-* date: 2023-01-23
+* date: 2023-08-29
 
 ## Table of Contents
 
@@ -14,8 +14,8 @@ language: en
 - [Data Model](#data-model)
 - [Serialization](#serialization)
   - [PICA Patch Plain](#pica-patch-plain)
-  - [PICA Patch Normalized](#pica-patch-normalized)
   - [PICA Patch JSON](#pica-patch-json)
+  - [PICA Patch Normalized](#pica-patch-normalized)
 - [Algorithms](#algorithms)
   - [Requirements](#requirements)
   - [Diff algorithm](#diff-algorithm)
@@ -28,16 +28,16 @@ language: en
 
 ## Introduction
 
-This document defines **PICA Patch**, a data format to express changes between
-records in PICA+ format in a machine-readable and reproducible way.  Records in
-PICA Patch format specify fields to add, to remove, and/or to compare with an
-existing PICA record. The rationale of PICA Patch is to communicate changes of
-PICA records in an unambigous, descriptive form (as data) instead of imperative
-instructions (as code).
+This document defines **PICA Patch**, a data format to express changes and
+differences between PICA+ records in a machine-readable and reproducible way.
+Records in PICA Patch format specify fields to add, to remove, and/or to
+compare with an existing PICA record. The rationale of PICA Patch is to
+communicate changes of PICA+ records in unambigous, descriptive form (as
+data) instead of imperative instructions (as code).
 
 The specification consists of a **normative part** with
 
-- definition of a [data model](#data-model) required to understand the format,
+- definition of a [data model](#data-model) of PICA+ records and PICA Patch records,
 - definition of interchangeable [serialization formats](#serialization) to encode and exchange PICA Patch records,
 - definition of [algorithms](#algorithms) to apply and create PICA Patch records
 
@@ -46,16 +46,18 @@ and an **informative part** with
 - [examples](#examples) of serialization and patching and
 - [application](#application) notes.
 
+Notes and examples are non-normative.
+
 ## Data Model
 
 A **PICA field** consists of:
 
 - a **tag**, being a string that matches regular expression `[012][0-9][0-9][A-Z@]`.
     The first digit is called **level** of the field.
-- an optional **occurrence**, being a string of two digits for level `0` and `1`, or two or three digits for level `2`. The occurrence must not consist of zeroes only, but a non-existing occurrence may informally be referred to as "occurrence zero".
+- an optional **occurrence**, being a string of two digits for level `0` and `1`, or two or three digits for level `2`. At least one digit must be other than `0`.
 - a non-empty sequence of **subfields**, each consting of:
     - a **subfield code**, being an alphanumeric character (one of `0-9`, `A-Z`, `a-z`)
-    - a **subfield value**, being a string
+    - a **subfield value**, being a (possibly empty) string
 
 Two PICA fields are identical if they have same tag, same occurrence and same subfield sequence.
 
@@ -72,42 +74,26 @@ A **PICA Patch record** is a sequence of PICA fields, each annotated with an **a
 PICA Patch records, can be encoded in multiple losslessly convertible forms:
 
 - [PICA Patch Plain](#pica-patch-plain) is best for human inspection
-- [PICA Patch Normalized](#pica-patch-normalized) is easier to process automatically
 - [PICA Patch JSON](#pica-patch-json) is useful in web applications
+- [PICA Patch Normalized](#pica-patch-normalized) is easier to process automatically
 
 ### PICA Patch Plain
 
 In PICA Patch Plain each PICA field is encoded as a sequence of:
 
-1. the annotation character (plus, minus or space)
-2. a space (byte code `20`)
-3. the tag
-4. optionally the occurrence, preceded by `/` (byte code `2F`)
-5. a space
-6. a non-empty sequence of subfields, each consisting of:
+1. either the annotation character (plus, minus or space) followed by a space (byte code `20`), or a possibly empty sequence of spaces as alias for annotation character space
+2. the tag
+3. the optional occurrence preceded by `/` (byte code `2F`)
+4. a space
+5. a non-empty sequence of subfields, each consisting of:
     - the subfield indicator `$` (byte code `24`)
     - the subfield code
     - the subfield value with `$` replaced by `$$` for escaping
-7. a newline character (byte code `A0`)
+6. a newline character (byte code `A0`)
 
 A PICA Patch record is a sequence of encoded PICA fields. Multiple records must be separated by empty lines (non-empty sequences of newline characters).
 
-*Note (non-normative): A PICA Patch record having every field annotated with a space in PICA Patch Plain is serialized identical to [PICA Plain](https://format.gbv.de/pica/plain) serialization of the PICA record without annotations.*
-
-### PICA Patch Normalized
-
-In PICA Patch Normalized each PICA Patch record is encoded as sequence of fields, terminated by a newline character (byte code `A0`). Each field consists of:
-
-1. the tag
-2. optionally the occurrence, preceded by `/` (byte code `2F`)
-2. the annotation character (plus, minus or space)
-4. a non-empty sequence of subfields, each consisting of
-    - the subfield indicator (byte code `1F`)
-    - the subfield code
-    - the subfield value
-5. an end-of-field character (byte code `1E`)
-
-*Note (non-normative): A PICA Patch record having every field annotated with a space in PICA Patch Normalized is serialized identical to [PICA Normalized serialization](https://format.gbv.de/pica/normalized) of the PICA record without annotations.*
+*Note: A PICA Patch record having every field annotated with a space in PICA Patch Plain is serialized identical to [PICA Plain](https://format.gbv.de/pica/plain) serialization of the PICA record without annotations.*
 
 ### PICA Patch JSON
 
@@ -117,6 +103,23 @@ In PICA Patch JSON each PICA Patch record is encoded as JSON array of fields. Ea
 2. the occurrence or an empty string if the field has no occurrence
 3. the subfields as alternating subfield codes and subfield values
 4. the annotation character (plus, minus or space)
+
+*Note: PICA Patch JSON is an extension of [PICA JSON Format](https://format.gbv.de/pica/json) by an additional array element in each field. Both formats can be distinguished by checking whether the number of array elements in a field is odd or even.*
+
+### PICA Patch Normalized
+
+In PICA Patch Normalized each PICA Patch record is encoded as sequence of fields, terminated by a newline character (byte code `A0`). Each field consists of:
+
+1. the tag
+2. the optional occurrence preceded by `/` (byte code `2F`)
+2. the annotation character (plus, minus or space)
+4. a non-empty sequence of subfields, each consisting of
+    - the subfield indicator (byte code `1F`)
+    - the subfield code
+    - the subfield value
+5. an end-of-field character (byte code `1E`)
+
+*Note: A PICA Patch record having every field annotated with a space in PICA Patch Normalized is serialized identical to [PICA Normalized serialization](https://format.gbv.de/pica/normalized) of the PICA record without annotations.*
 
 ## Algorithms
 
@@ -188,20 +191,6 @@ The same record in JSON syntax is:
  ]
 ~~~
 
-While Plain is recommended to communicate and inspect data, Normalized and JSON syntax are recommended for further processing. The following Perl script can be used to convert from PICA Patch Plain to PICA Patch Normalized:
-
-~~~perl
-#!/usr/bin/perl
-use v5.14.1;
-while (<>) {
-  say && next if $_ eq ''; # end of record
-  die "invalid PICA Patch Plain at line $.: '$_'\n"
-  if $_ !~ qr{^([ +-]) ([012]\d\d[A-Z@](/\d+)?) \$(.+)};
-  my $value = join '$', map { s/\$/\x1F/gr; } split '\$\$', $4;
-  print "$2$1\x1F$value\x1E";
-}
-~~~
-
 ### Patch
 
 Unconditionally add field `021A` with one subfield `$a` and value `A book` to a
@@ -250,10 +239,11 @@ inspect and modify PICA Patch records depending on use case, for instance:
 
 Which and how to do this processing is out of the scope of this specification.
 
-## Changes
+## Changelog
 
 This document is managed in a git repository at <https://github.com/gbv/pica-patch>.
 
+* 2023-08-29: Allow any sequence of spaces for annotation character space in PICA Patch Plain
 * 2023-01-23: Typos, layout and clarify idempotency of patching.
 * 2022-12-20: Published revised version at <https://format.gbv.de/pica/patch/specification>
 * 2022-09-14: First English version, shared after CBS partner meeting
